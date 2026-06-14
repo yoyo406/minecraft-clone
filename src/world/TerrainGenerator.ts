@@ -8,16 +8,24 @@ export class TerrainGenerator {
   private caveNoise: SimplexNoise;
   private treeNoise: SimplexNoise;
   private biomeNoise: SimplexNoise;
+  private seed: number;
 
   private readonly seaLevel = 20;
   private readonly baseHeight = 24;
 
   constructor(seed: number = 42) {
+    this.seed = seed;
     this.heightNoise = new SimplexNoise(seed);
     this.detailNoise = new SimplexNoise(seed + 1);
     this.caveNoise = new SimplexNoise(seed + 2);
     this.treeNoise = new SimplexNoise(seed + 3);
     this.biomeNoise = new SimplexNoise(seed + 4);
+  }
+
+  private hash(x: number, y: number, z: number): number {
+    let h = (x * 374761393 + y * 668265263 + z * 1274126177 + this.seed * 1013904223) | 0;
+    h = ((h ^ (h >> 13)) * 1274126177) | 0;
+    return (h & 0x7fffffff) / 0x7fffffff;
   }
 
   generateChunk(chunk: Chunk): void {
@@ -98,9 +106,9 @@ export class TerrainGenerator {
       return BlockType.DIRT;
     }
 
-    // Ore generation
-    if (ly < 20 && Math.random() < 0.01) return BlockType.IRON_ORE;
-    if (ly < 40 && Math.random() < 0.015) return BlockType.COAL_ORE;
+    // Ore generation (deterministic based on position)
+    if (ly < 20 && this.hash(wx, ly, _wz) < 0.01) return BlockType.IRON_ORE;
+    if (ly < 40 && this.hash(wx + 7, ly, _wz + 13) < 0.015) return BlockType.COAL_ORE;
 
     return BlockType.STONE;
   }
@@ -137,7 +145,7 @@ export class TerrainGenerator {
   }
 
   private placeTree(chunk: Chunk, x: number, baseY: number, z: number): void {
-    const trunkHeight = 4 + Math.floor(Math.random() * 2);
+    const trunkHeight = 4 + (this.hash(x, baseY, z) > 0.5 ? 1 : 0);
 
     // Trunk
     for (let y = 0; y < trunkHeight; y++) {
@@ -151,7 +159,7 @@ export class TerrainGenerator {
       for (let dx = -radius; dx <= radius; dx++) {
         for (let dz = -radius; dz <= radius; dz++) {
           if (dx === 0 && dz === 0 && dy < 2) continue; // trunk space
-          if (Math.abs(dx) === radius && Math.abs(dz) === radius && Math.random() > 0.6) continue;
+          if (Math.abs(dx) === radius && Math.abs(dz) === radius && this.hash(x + dx, baseY + dy, z + dz) > 0.6) continue;
           const lx = x + dx;
           const lz = z + dz;
           if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
