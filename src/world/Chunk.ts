@@ -39,11 +39,6 @@ export class Chunk {
   dispose(): void {
     if (this.mesh) {
       this.mesh.geometry.dispose();
-      if (Array.isArray(this.mesh.material)) {
-        this.mesh.material.forEach(m => m.dispose());
-      } else {
-        this.mesh.material.dispose();
-      }
     }
   }
 }
